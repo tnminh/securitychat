@@ -1,0 +1,1 @@
+window.keypair=require('keypair');

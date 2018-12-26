@@ -1,0 +1,1 @@
+window.ajax=require("jquery").ajax;
