@@ -87,7 +87,7 @@ class waitingRSAMsg extends waitingMsg{
         super(re,resp);
     }
     send(){
-        thisClass=this;
+        var thisClass=this;
         thisClass.bodyMsgPromise.then(function(){
             var pemPublicKey = thisClass.comingBodyMsg;
             var encryptedMsg=rsaSecurity.encryptFromPublicKey(pemPublicKey,thisClass.message);
@@ -111,8 +111,8 @@ class waitingAESMsg extends waitingMsg{
         super(re,resp);
     }
     send(msg){
-        thisClass=this;
-        encryptedMsg.aesSecurity.encryptAES(thisClass.message);
+        var thisClass=this;
+        var encryptedMsg=aesSecurity.encryptAES(thisClass.message);
         thisClass.response.write(encryptedMsg);
         thisClass.response.end();
     }
@@ -122,7 +122,8 @@ class waitingAesSetupMsg extends waitingRSAMsg{
         super(re,resp);
     }
     responseMsg(){
-        this.send(aesSecurity.getAesKey());
+        this.setMsg(aesSecurity.getAesKey())
+        this.send();
     }
 }
 
@@ -202,7 +203,7 @@ server.on('request', function (request, response) {
             new waitingRsaSetupMsg(request,response);
         }
         if(pathname==="/get-aes-key-msg"){
-            new waitingRsaSetupMsg(request,response);
+            new waitingAesSetupMsg(request,response);
         }
     }
     catch (err) {
@@ -215,18 +216,20 @@ server.on('request', function (request, response) {
 var aesSecurity=function(){
     var aesKey= forge.random.getBytesSync(16);
     var iv = "0123456789123456";
-    var cipher = forge.cipher.createCipher('AES-CBC', aesKey);
-    cipher.start({iv: iv});
-    var decipher = forge.cipher.createDecipher('AES-CBC', aesKey);
-    decipher.start({iv: iv});
+
+
 
     var encryptAES=function(data){
+        var cipher = forge.cipher.createCipher('AES-CBC', aesKey);
+        cipher.start({iv: iv});
         cipher.update(forge.util.createBuffer(data));
         cipher.finish();
         var encrypted = cipher.output.data;
         return encrypted;
     }
     var decryptAes=function(data){
+        var decipher = forge.cipher.createDecipher('AES-CBC', aesKey);
+        decipher.start({iv: iv});
         decipher.update(forge.util.createBuffer(data));
         var result = decipher.finish(); // check 'result' for true/false
         // outputs decrypted hex
@@ -248,14 +251,14 @@ var rsaSecurity=function(){
         return  forge.pki.publicKeyToPem(publicKey);
     }
     var pemToPublickey=function(pemPublicKey){
-        return forge.pki.publicKeyFromPem(pem)
+        return forge.pki.publicKeyFromPem(pemPublicKey)
     }
     var decript=function(encrypted){
         return privateKey.decrypt(encrypted);
     }
     var encryptFromPublicKey=function(pemPublicKey,data){
         var pKey=pemToPublickey(pemPublicKey);
-        var encrpyted=pkey.encrypt(data);
+        var encrpyted=pKey.encrypt(data);
         return encrpyted;
     }
     return{
