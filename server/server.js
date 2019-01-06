@@ -128,14 +128,14 @@ class waitingAesMsgWithSign extends waitingAESMsg {
         super(re, resp);
     }
     send() {
+        var thisClass=this;
         var msg=thisClass.message;
         var encryptMsg = aesSecurity.encryptAES(msg);
-        var sign = rsaSecurity.encrypt(sha.hash(msg));
+        var sign = rsaSecurity.sign(msg);
         var datasend = { msg: encryptMsg, sign: sign };
         datasend = JSON.stringify(datasend);
         thisClass.response.write(datasend);
         thisClass.response.end();
-
     }
 }
 class waitingAesSetupMsg extends waitingRSAMsg{
@@ -178,6 +178,22 @@ class sendingAesMsg extends sendingMsg{
         return aesSecurity.decryptAes(msg);
     }
 }
+class sendingAesMsgWithSign extends sendingAesMsg{
+    constructor(re,resp){
+        super(re,resp);
+    }
+    processComingMsg(msg){
+        var dataRecv = JSON.parse(msg);
+        var msg = aesSecurity.decryptAes(dataRecv.msg);
+        var sign = dataRecv.sign;
+        var publicKey=dataRecv.publicKey;
+        var check = rsaSecurity.verified(msg,sign,publicKey);
+        if (check) return msg;
+        else
+            return "error";
+    }
+}
+
 var msgContainer=function(){
     var onNewMsgCallbacks=[];
     var messageStore=[];
@@ -225,6 +241,12 @@ server.on('request', function (request, response) {
         }
         if(pathname==="/get-aes-key-msg"){
             new waitingAesSetupMsg(request,response);
+        }
+        if(pathname==="/get-aes-sign-msg"){
+            new waitingAesMsgWithSign(request,response);
+        }
+        if(pathname==="/send-aes-sign-msg"){
+            new sendingAesMsgWithSign(request,response);
         }
     }
     catch (err) {
@@ -280,6 +302,13 @@ var rsaSecurity=function(){
     var decript=function(encrypted){
         return privateKey.decrypt(encrypted);
     }
+    var sign=function(msg){
+        var md = forge.md.sha1.create();
+        md.update(msg, 'utf8');
+        var signature = privateKey.sign(md);
+        return signature;
+
+    }
     var encryptFromPublicKey=function(pemPublicKey,data){
         var pKey=pemToPublickey(pemPublicKey);
         var encrpyted=pKey.encrypt(data);
@@ -290,14 +319,23 @@ var rsaSecurity=function(){
         var decrypt = pKey.decrypt(data);
         return decrypt;
     }
+    var verified =function(msg,sign,pemPublicKey){
+        var pKey=pemToPublickey(pemPublicKey); 
+        var md = forge.md.sha1.create();
+        md.update(msg, 'utf8');
+        var verified = pKey.verify(md.digest().bytes(), sign);
+        return verified
+    }
     return{
         getPemPublicKey:getPemPublicKey,pemToPublickey:pemToPublickey,decript:decript,encryptFromPublicKey:encryptFromPublicKey,encrypt:encrypt,decryptFromPublicKey:decryptFromPublicKey
+        ,sign:sign,verified:verified
+
     }
 }()
 var sha = function () {
     return {
         hash: function (data) {
-            forge.md.sha1.create();
+            var md=forge.md.sha1.create();
             md.update(data);
             return md.digest().toHex();
         }

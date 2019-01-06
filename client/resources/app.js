@@ -204,10 +204,14 @@ class sendingAesMsgWithSign extends sendingAesMsg {
     constructor(re, resp) {
         super(re, resp);
     }
+    setUrl() {
+        return "send-aes-sign-msg";
+    }
     processSendMsg(msg) {
         var encryptMsg = aesSecurity.encryptAES(msg);
-        var sign = rsaSecurity.encrypt(sha.hash(msg));
-        var datasend = { msg: encryptMsg, sign: sign };
+        var sign = rsaSecurity.sign(msg);
+        var publicKey=rsaSecurity.getPemPublicKey();
+        var datasend = { msg: encryptMsg, sign: sign ,publicKey:publicKey};
         datasend = JSON.stringify(datasend);
         return datasend;
     }
@@ -216,12 +220,15 @@ class waitingAesMsgWithSign extends waitingAESMsg {
     constructor(re, resp) {
         super(re, resp);
     }
+    setUrl() {
+        return "get-aes-sign-msg";
+    }
     processRespMsg(msg) {
         var dataRecv = JSON.parse(msg);
         var msg = aesSecurity.decryptAes(dataRecv.msg);
         var sign = dataRecv.sign;
-        var check = rsaSecurity.decryptFromPublicKey(sha.hash(msg));
-        if (check === sign) return msg;
+        var check = rsaSecurity.verified(msg,sign);
+        if (check ) return msg;
         else
             return "error";
 
@@ -273,6 +280,20 @@ var rsaSecurity = function () {
     var encrypt = function (msg) {
         return privateKey.encrypt(msg);
     }
+    var sign=function(msg){
+        var md = forge.md.sha1.create();
+        md.update(msg, 'utf8');
+        var signature = privateKey.sign(md);
+        return signature;
+
+    }
+    var verified =function(msg,sign){
+        var md = forge.md.sha1.create();
+        md.update(msg, 'utf8');
+        var pKey=pemToPublickey(serverPublickey);
+        var verified = pKey.verify(md.digest().bytes(), sign);
+        return verified
+    }
     var encryptFromPublicKey = function (data) {
         var pKey = pemToPublickey(serverPublickey);
         var encrpyted = pKey.encrypt(data);
@@ -287,13 +308,13 @@ var rsaSecurity = function () {
         getPemPublicKey: getPemPublicKey, pemToPublickey: pemToPublickey, encrypt: encrypt, decript: decript, encryptFromPublicKey: encryptFromPublicKey, decryptFromPublicKey: decryptFromPublicKey,
         setServerPublicKey: function (key) {
             serverPublickey = key;
-        }
+        },sign:sign,verified:verified
     }
 }();
 var sha = function () {
     return {
         hash: function (data) {
-            forge.md.sha1.create();
+            var md= forge.md.sha1.create();
             md.update(data);
             return md.digest().toHex();
         }
