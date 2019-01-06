@@ -7,11 +7,20 @@
 </head>
 
 <body>
+    <div style="overflow:scroll;width:500px;height: 200px;" id="boxMsg"> 
+
+    </div>
+    <input type="text" id="txtName">
+    <input type="text" id="txtMsg">
+    <button id="sendBtn">Send</button>
 
     <script src="/resources/keypair/keypair.js" type="text/javascript"></script>
     <script src="/resources/forge/forge.js" type="text/javascript"></script>
     <script src="/resources/jquery/jquery.js" type="text/javascript"></script>
     <script src="/resources/app.js" type="text/javascript"></script>
+    <script>
+        chatApp(new waitingRSAMsg(),new sendingRSAMsg());
+    </script>
 </body>
 
 </html>

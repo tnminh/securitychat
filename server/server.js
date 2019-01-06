@@ -17,6 +17,12 @@ var server = function () {
                 response.end();
                 return;
             }
+            if (pathname.includes("/html/")) {
+                var txt = fs.readFileSync("client"+pathname, "utf8");
+                response.write(txt);
+                response.end();
+                return;
+            }
              //html
              if (pathname === "/") {
                 var txt = fs.readFileSync("client/"+ "html/app.html", "utf8");
@@ -110,11 +116,26 @@ class waitingAESMsg extends waitingMsg{
     constructor(re,resp){
         super(re,resp);
     }
-    send(msg){
+    send(){
         var thisClass=this;
         var encryptedMsg=aesSecurity.encryptAES(thisClass.message);
         thisClass.response.write(encryptedMsg);
         thisClass.response.end();
+    }
+}
+class waitingAesMsgWithSign extends waitingAESMsg {
+    constructor(re, resp) {
+        super(re, resp);
+    }
+    send() {
+        var msg=thisClass.message;
+        var encryptMsg = aesSecurity.encryptAES(msg);
+        var sign = rsaSecurity.encrypt(sha.hash(msg));
+        var datasend = { msg: encryptMsg, sign: sign };
+        datasend = JSON.stringify(datasend);
+        thisClass.response.write(datasend);
+        thisClass.response.end();
+
     }
 }
 class waitingAesSetupMsg extends waitingRSAMsg{
@@ -253,6 +274,9 @@ var rsaSecurity=function(){
     var pemToPublickey=function(pemPublicKey){
         return forge.pki.publicKeyFromPem(pemPublicKey)
     }
+    var encrypt = function (msg) {
+        return privateKey.encrypt(msg);
+    }
     var decript=function(encrypted){
         return privateKey.decrypt(encrypted);
     }
@@ -261,7 +285,21 @@ var rsaSecurity=function(){
         var encrpyted=pKey.encrypt(data);
         return encrpyted;
     }
+    var decryptFromPublicKey = function (pemPublicKey,data) {
+        var pKey = pemToPublickey(pemPublicKey);
+        var decrypt = pKey.decrypt(data);
+        return decrypt;
+    }
     return{
-        getPemPublicKey:getPemPublicKey,pemToPublickey:pemToPublickey,decript:decript,encryptFromPublicKey:encryptFromPublicKey
+        getPemPublicKey:getPemPublicKey,pemToPublickey:pemToPublickey,decript:decript,encryptFromPublicKey:encryptFromPublicKey,encrypt:encrypt,decryptFromPublicKey:decryptFromPublicKey
     }
 }()
+var sha = function () {
+    return {
+        hash: function (data) {
+            forge.md.sha1.create();
+            md.update(data);
+            return md.digest().toHex();
+        }
+    }
+}();
