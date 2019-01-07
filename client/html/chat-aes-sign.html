@@ -4,15 +4,28 @@
     <title>Dashboard</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .button {
+  background-color: #4CAF50; /* Green */
+  border: none;
+  color: white;
+  padding: 7px 15px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+}
+    </style>
 </head>
 
 <body>
     <div style="overflow:scroll;width:500px;height: 200px;" id="boxMsg"> 
 
     </div>
-    <input type="text" id="txtName">
-    <input type="text" id="txtMsg">
-    <button id="sendBtn">Send</button>
+    Name:   <input type="text" id="txtName">
+    <br>
+    Message:<input type="text" id="txtMsg">
+    <button class="button" id="sendBtn">Send</button>
 
     <script src="/resources/keypair/keypair.js" type="text/javascript"></script>
     <script src="/resources/forge/forge.js" type="text/javascript"></script>
